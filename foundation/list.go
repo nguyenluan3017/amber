@@ -22,6 +22,7 @@ func NewList[T any]() *List[T] {
 	lst := new(List[T])
 	lst.begin = new(Node[T])
 	lst.end = new(Node[T])
+	lst.begin.connect(lst.end)
 	return lst
 }
 
@@ -82,12 +83,19 @@ func (lst *List[T]) Insert(node *Node[T], value T) *Node[T] {
 }
 
 func (lst *List[T]) Remove(node *Node[T]) *Node[T] {
-	return nil
+	if node == nil || node == lst.begin || node == lst.end {
+		return nil
+	}
+
+	prev, next := node.prev, node.next
+	prev.connect(next)
+
+	return node
 }
 
-func Find[T comparable](lst *List[T], value T) *Node[T] {
+func (lst *List[T]) Find(value T, compare func(T, T) int) *Node[T] {
 	for it := lst.begin.next; it != lst.end; it = it.next {
-		if *it.value == value {
+		if compare(*it.value, value) == 0 {
 			return it
 		}
 	}
