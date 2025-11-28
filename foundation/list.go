@@ -85,6 +85,12 @@ func (lst *List[T]) Remove(node *Node[T]) *Node[T] {
 	return nil
 }
 
-func (lst *List[T]) Find(value T) *Node[T] {
+func Find[T comparable](lst *List[T], value T) *Node[T] {
+	for it := lst.begin.next; it != lst.end; it = it.next {
+		if *it.value == value {
+			return it
+		}
+	}
+
 	return nil
 }
