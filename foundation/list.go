@@ -11,6 +11,10 @@ type List[T any] struct {
 	end   *Node[T]
 }
 
+func (node *Node[T]) Value() *T {
+	return node.value
+}
+
 func (node *Node[T]) connect(another *Node[T]) {
 	node.next = another
 	if another != nil {
@@ -23,6 +27,14 @@ func NewList[T any]() *List[T] {
 	lst.begin = new(Node[T])
 	lst.end = new(Node[T])
 	lst.begin.connect(lst.end)
+	return lst
+}
+
+func NewListOf[T any](values ...T) *List[T] {
+	lst := NewList[T]()
+	for _, value := range values {
+		lst.Append(value)
+	}
 	return lst
 }
 
@@ -93,12 +105,30 @@ func (lst *List[T]) Remove(node *Node[T]) *Node[T] {
 	return node
 }
 
-func (lst *List[T]) Find(value T, compare func(T, T) int) *Node[T] {
+func (lst *List[T]) Find(value T, compare func(*T, *T) int) *Node[T] {
 	for it := lst.begin.next; it != lst.end; it = it.next {
-		if compare(*it.value, value) == 0 {
+		if compare(it.value, &value) == 0 {
 			return it
 		}
 	}
 
 	return nil
+}
+
+func Find[T comparable](list *List[T], value T) *Node[T] {
+	return list.Find(value, func(lhs *T, rhs *T) int {
+		if *lhs == *rhs {
+			return 0
+		}
+
+		return 1
+	})
+}
+
+func (lst *List[T]) Begin() *Node[T] {
+	return lst.begin
+}
+
+func (lst *List[T]) End() *Node[T] {
+	return lst.end
 }

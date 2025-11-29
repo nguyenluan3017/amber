@@ -248,8 +248,8 @@ func TestRemove_MultipleElements_MaintainsListIntegrity(t *testing.T) {
 func TestFind_EmptyList_ReturnsNil(t *testing.T) {
 	sut := NewList[int]()
 
-	result := sut.Find(42, func(a int, b int) int {
-		return a - b
+	result := sut.Find(42, func(a *int, b *int) int {
+		return *a - *b
 	})
 
 	assert.Nil(t, result)
@@ -262,8 +262,8 @@ func TestFind_NonExistingValue_ReturnsNil(t *testing.T) {
 		sut.Append(value)
 	}
 
-	result := sut.Find(-1, func(a int, b int) int {
-		return a - b
+	result := sut.Find(-1, func(a *int, b *int) int {
+		return *a - *b
 	})
 
 	assert.Nil(t, result)
@@ -276,8 +276,8 @@ func TestFind_FirstElement_ReturnsCorrectNode(t *testing.T) {
 		sut.Append(value)
 	}
 
-	result := sut.Find(0, func(a int, b int) int {
-		return a - b
+	result := sut.Find(0, func(a *int, b *int) int {
+		return *a - *b
 	})
 
 	assert.NotNil(t, result)
@@ -292,8 +292,8 @@ func TestFind_LastElement_ReturnsCorrectNode(t *testing.T) {
 		sut.Append(value)
 	}
 
-	result := sut.Find(4, func(a int, b int) int {
-		return a - b
+	result := sut.Find(4, func(a *int, b *int) int {
+		return *a - *b
 	})
 
 	assert.NotNil(t, result)
@@ -308,8 +308,8 @@ func TestFind_MiddleElement_ReturnsCorrectNode(t *testing.T) {
 		sut.Append(value)
 	}
 
-	result := sut.Find(3, func(a int, b int) int {
-		return a - b
+	result := sut.Find(3, func(a *int, b *int) int {
+		return *a - *b
 	})
 
 	assert.NotNil(t, result)
@@ -324,13 +324,11 @@ func TestFind_WithStrings_UsesCustomComparator(t *testing.T) {
 	sut.Append("banana")
 	sut.Append("cherry")
 
-	result := sut.Find("banana", func(a string, b string) int {
-		if a == b {
+	result := sut.Find("banana", func(a *string, b *string) int {
+		if *a == *b {
 			return 0
 		}
-		if a < b {
-			return -1
-		}
+
 		return 1
 	})
 
@@ -343,10 +341,10 @@ func TestFind_WithCustomComparator_CaseInsensitive(t *testing.T) {
 	sut.Append("Hello")
 	sut.Append("World")
 
-	result := sut.Find("HELLO", func(a string, b string) int {
-		aLower := strings.ToLower(a)
-		bLower := strings.ToLower(b)
-		if aLower == bLower || (len(a) == len(b) && a != b) {
+	result := sut.Find("HELLO", func(a *string, b *string) int {
+		aLower := strings.ToLower(*a)
+		bLower := strings.ToLower(*b)
+		if aLower == bLower || (len(*a) == len(*b) && a != b) {
 			return 0
 		}
 		if aLower < bLower {
@@ -365,9 +363,242 @@ func TestFind_DuplicateValues_ReturnsFirstMatch(t *testing.T) {
 	sut.Insert(sut.end, 10)
 	sut.Insert(sut.end, 5)
 
-	result := sut.Find(5, func(a int, b int) int {
-		return a - b
+	result := sut.Find(5, func(a *int, b *int) int {
+		return *a - *b
 	})
 
 	assert.Equal(t, first, result)
+}
+
+// Test Value()
+func TestValue_ReturnsNodeValue(t *testing.T) {
+	sut := NewList[int]()
+	node := sut.Insert(sut.begin, 42)
+
+	result := node.Value()
+
+	assert.NotNil(t, result)
+	assert.Equal(t, 42, *result)
+}
+
+func TestValue_NilValueNode_ReturnsNil(t *testing.T) {
+	node := &Node[int]{}
+
+	result := node.Value()
+
+	assert.Nil(t, result)
+}
+
+func TestValue_WithString_ReturnsCorrectValue(t *testing.T) {
+	sut := NewList[string]()
+	node := sut.Insert(sut.begin, "hello")
+
+	result := node.Value()
+
+	assert.NotNil(t, result)
+	assert.Equal(t, "hello", *result)
+}
+
+// Test NewListOf
+func TestNewListOf_EmptyVariadic_CreatesEmptyList(t *testing.T) {
+	sut := NewListOf[int]()
+
+	assert.NotNil(t, sut)
+	assert.Equal(t, sut.end, sut.begin.next)
+	assert.Equal(t, sut.begin, sut.end.prev)
+}
+
+func TestNewListOf_SingleValue_CreatesListWithOneElement(t *testing.T) {
+	sut := NewListOf(42)
+
+	values := make([]int, 0)
+	for it := sut.begin.next; it != sut.end; it = it.next {
+		values = append(values, *it.value)
+	}
+
+	assert.Equal(t, []int{42}, values)
+}
+
+func TestNewListOf_MultipleValues_CreatesListInCorrectOrder(t *testing.T) {
+	sut := NewListOf(1, 2, 3, 4, 5)
+
+	values := make([]int, 0)
+	for it := sut.begin.next; it != sut.end; it = it.next {
+		values = append(values, *it.value)
+	}
+
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, values)
+}
+
+func TestNewListOf_WithStrings_CreatesCorrectList(t *testing.T) {
+	sut := NewListOf("apple", "banana", "cherry")
+
+	values := make([]string, 0)
+	for it := sut.begin.next; it != sut.end; it = it.next {
+		values = append(values, *it.value)
+	}
+
+	assert.Equal(t, []string{"apple", "banana", "cherry"}, values)
+}
+
+func TestNewListOf_WithStructs_CreatesCorrectList(t *testing.T) {
+	type Person struct {
+		Name string
+		Age  int
+	}
+
+	sut := NewListOf(
+		Person{"Alice", 30},
+		Person{"Bob", 25},
+	)
+
+	values := make([]Person, 0)
+	for it := sut.begin.next; it != sut.end; it = it.next {
+		values = append(values, *it.value)
+	}
+
+	assert.Equal(t, 2, len(values))
+	assert.Equal(t, "Alice", values[0].Name)
+	assert.Equal(t, "Bob", values[1].Name)
+}
+
+// Test Find[T comparable]
+func TestFindComparable_EmptyList_ReturnsNil(t *testing.T) {
+	sut := NewList[int]()
+
+	result := Find(sut, 42)
+
+	assert.Nil(t, result)
+}
+
+func TestFindComparable_NonExistingValue_ReturnsNil(t *testing.T) {
+	sut := NewListOf(1, 2, 3, 4, 5)
+
+	result := Find(sut, 10)
+
+	assert.Nil(t, result)
+}
+
+func TestFindComparable_ExistingValue_ReturnsCorrectNode(t *testing.T) {
+	sut := NewListOf(10, 20, 30, 40, 50)
+
+	result := Find(sut, 30)
+
+	assert.NotNil(t, result)
+	assert.Equal(t, 30, *result.value)
+}
+
+func TestFindComparable_FirstElement_ReturnsCorrectNode(t *testing.T) {
+	sut := NewListOf(1, 2, 3)
+
+	result := Find(sut, 1)
+
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, *result.value)
+	assert.Equal(t, sut.begin, result.prev)
+}
+
+func TestFindComparable_LastElement_ReturnsCorrectNode(t *testing.T) {
+	sut := NewListOf(1, 2, 3)
+
+	result := Find(sut, 3)
+
+	assert.NotNil(t, result)
+	assert.Equal(t, 3, *result.value)
+	assert.Equal(t, sut.end, result.next)
+}
+
+func TestFindComparable_WithStrings_FindsCorrectValue(t *testing.T) {
+	sut := NewListOf("apple", "banana", "cherry")
+
+	result := Find(sut, "banana")
+
+	assert.NotNil(t, result)
+	assert.Equal(t, "banana", *result.value)
+}
+
+func TestFindComparable_DuplicateValues_ReturnsFirstMatch(t *testing.T) {
+	sut := NewList[int]()
+	first := sut.Insert(sut.end, 5)
+	sut.Insert(sut.end, 10)
+	sut.Insert(sut.end, 5)
+
+	result := Find(sut, 5)
+
+	assert.Equal(t, first, result)
+}
+
+func TestFindComparable_WithFloat_WorksCorrectly(t *testing.T) {
+	sut := NewListOf(1.5, 2.7, 3.14)
+
+	result := Find(sut, 2.7)
+
+	assert.NotNil(t, result)
+	assert.Equal(t, 2.7, *result.value)
+}
+
+// Test Begin()
+func TestBegin_EmptyList_ReturnsBeginSentinel(t *testing.T) {
+	sut := NewList[int]()
+
+	result := sut.Begin()
+
+	assert.NotNil(t, result)
+	assert.Nil(t, result.value)
+	assert.Equal(t, sut.end, result.next)
+}
+
+func TestBegin_NonEmptyList_ReturnsBeginSentinel(t *testing.T) {
+	sut := NewListOf(1, 2, 3)
+
+	result := sut.Begin()
+
+	assert.NotNil(t, result)
+	assert.Nil(t, result.value)
+	assert.Equal(t, 1, *result.next.value)
+}
+
+func TestBegin_ConsistentReference_ReturnsSameNode(t *testing.T) {
+	sut := NewListOf(1, 2, 3)
+
+	first := sut.Begin()
+	second := sut.Begin()
+
+	assert.Equal(t, first, second)
+}
+
+// Test End()
+func TestEnd_EmptyList_ReturnsEndSentinel(t *testing.T) {
+	sut := NewList[int]()
+
+	result := sut.End()
+
+	assert.NotNil(t, result)
+	assert.Nil(t, result.value)
+	assert.Equal(t, sut.begin, result.prev)
+}
+
+func TestEnd_NonEmptyList_ReturnsEndSentinel(t *testing.T) {
+	sut := NewListOf(1, 2, 3)
+
+	result := sut.End()
+
+	assert.NotNil(t, result)
+	assert.Nil(t, result.value)
+	assert.Equal(t, 3, *result.prev.value)
+}
+
+func TestEnd_ConsistentReference_ReturnsSameNode(t *testing.T) {
+	sut := NewListOf(1, 2, 3)
+
+	first := sut.End()
+	second := sut.End()
+
+	assert.Equal(t, first, second)
+}
+
+func TestBeginEnd_DifferentNodes(t *testing.T) {
+	sut := NewList[int]()
+
+	assert.NotEqual(t, sut.Begin(), sut.End())
 }
